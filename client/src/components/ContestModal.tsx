@@ -37,12 +37,10 @@ const ContestModal = ({ contest, onSave, onClose }: ContestModalProps) => {
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 
-		// For new contest, only contestId is required
 		if (!contest && !formData.contestId) {
 			return;
 		}
 
-		// For existing contest, prepare update payload
 		const payload = contest
 			? {
 					contestId: formData.contestId,

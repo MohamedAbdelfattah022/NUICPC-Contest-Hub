@@ -1,3 +1,4 @@
 expirement
 node_modules
 .env
+*.json

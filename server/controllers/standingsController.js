@@ -31,7 +31,7 @@ export const getStandings = async (req, res) => {
 
         try {
             const standings = await updateStandings(contest.contestId);
-
+            console.log('updated standings successfully');
             standingsCache.set(id, {
                 standings,
                 timestamp: Date.now()

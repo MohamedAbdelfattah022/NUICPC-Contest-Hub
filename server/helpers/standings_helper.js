@@ -11,7 +11,6 @@ export const updateStandings = async (contestId) => {
     const contestUrl = `https://vjudge.net/contest/rank/single/${contestId}`;
 
     try {
-        // Login to fetch the cookie
         const payload = {
             username: process.env.user,
             password: process.env.password,
@@ -28,7 +27,6 @@ export const updateStandings = async (contestId) => {
 
         const cookie = loginResponse.headers.get('set-cookie');
 
-        // Fetch standings
         const standingsResponse = await fetch(contestUrl, {
             headers: { Cookie: cookie },
         });
@@ -39,11 +37,9 @@ export const updateStandings = async (contestId) => {
 
         const response = await standingsResponse.json();
 
-        // Process standings data
         const unifiedData = {};
         const firstSolves = {};
 
-        // Process participants
         for (const [participantId, info] of Object.entries(response.participants)) {
             unifiedData[participantId] = {
                 handle: info[0],
@@ -54,7 +50,6 @@ export const updateStandings = async (contestId) => {
             };
         }
 
-        // Process submissions
         for (const submission of response.submissions) {
             const [participantId, problemIndex, status, time] = submission;
             const submissionEntry = { problem_index: problemIndex, status, time };
@@ -87,7 +82,6 @@ export const updateStandings = async (contestId) => {
             }
         }
 
-        // Transform data into final standings format
         const standings = Object.entries(unifiedData).map(([participantId, data]) => {
             const solvedProblems = new Set();
             let totalTimePenalty = 0;
@@ -120,19 +114,16 @@ export const updateStandings = async (contestId) => {
             };
         });
 
-        // Sort standings
         standings.sort((a, b) => {
             if (a.total_solved !== b.total_solved) return b.total_solved - a.total_solved;
             return a.total_time - b.total_time;
         });
 
-        // Find the contest and update its standings
         const contest = await Contest.findOne({ contestId });
         if (!contest) {
             throw new Error('Contest not found');
         }
 
-        // Update or create standings document
         const existingStandings = await Standings.findOne({ 'contest': contest._id });
         if (existingStandings) {
             existingStandings.standings = standings;

@@ -10,7 +10,6 @@ const api = axios.create({
 	},
 });
 
-// Contest APIs
 export const getContests = async (): Promise<Contest[]> => {
 	try {
 		const response = await api.get("/contests");
@@ -60,7 +59,6 @@ export const deleteContest = async (id: string): Promise<void> => {
 	}
 };
 
-// Standings APIs
 export const getStandings = async (
 	contestId: string | { id: string }
 ): Promise<Contestant[]> => {
@@ -73,7 +71,6 @@ export const getStandings = async (
 	}
 };
 
-// User APIs
 export const getUsers = async (): Promise<User[]> => {
 	try {
 		const response = await api.get("/users");
@@ -121,7 +118,6 @@ export const deleteUser = async (id: string): Promise<void> => {
 	}
 };
 
-// Error handling
 const handleApiError = (error: unknown): Error => {
 	if (axios.isAxiosError(error)) {
 		const message = error.response?.data?.message || error.message;

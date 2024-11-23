@@ -32,51 +32,6 @@ export const createContest = async (req, res) => {
     }
 };
 
-// export const createContest = async (req, res) => {
-//     try {
-//         const {
-//             contestId,
-//             name,
-//             startTime,
-//             duration,
-//             status
-//         } = req.body;
-
-//         if (!contestId || !startTime) {
-//             return res.status(400).json({
-//                 message: 'Contest ID and Start Time are required'
-//             });
-//         }
-
-//         const existingContest = await Contest.findOne({ contestId });
-//         if (existingContest) {
-//             return res.status(409).json({
-//                 message: 'Contest with the same ID already exists'
-//             });
-//         }
-
-//         const newContest = new Contest({
-//             contestId,
-//             name,
-//             startTime,
-//             duration: duration || 0,
-//             status: status || "upcoming"
-//         });
-
-//         const savedContest = await newContest.save();
-//         res.status(201).json({
-//             message: 'Contest created successfully',
-//             contest: savedContest
-//         });
-
-//     } catch (error) {
-//         res.status(500).json({
-//             message: 'Error creating contest',
-//             error: error.message
-//         });
-//     }
-// };
-
 export const getAllContests = async (req, res) => {
     try {
         const {
@@ -101,7 +56,6 @@ export const getAllContests = async (req, res) => {
             .sort(sortOptions)
             .skip(skip)
             .limit(pageLimit);
-        // .populate('standings');
 
         const totalContests = await Contest.countDocuments(filter);
 
@@ -160,9 +114,6 @@ export const updateContest = async (req, res) => {
             });
         }
 
-        // if (updateData.contestId) {
-        //     delete updateData.contestId;
-        // }
         if (updateData.status &&
             !['upcoming', 'active', 'completed'].includes(updateData.status)) {
             return res.status(400).json({
