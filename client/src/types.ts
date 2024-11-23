@@ -4,6 +4,7 @@ export interface Contest {
 	startTime: string;
 	duration: number;
 	status: "upcoming" | "active" | "completed";
+	length: number;
 }
 
 export interface User {

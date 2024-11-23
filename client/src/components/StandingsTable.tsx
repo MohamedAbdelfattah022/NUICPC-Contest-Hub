@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
-import { getStandings } from "../services/api";
+import { getStandings, getContestById } from "../services/api";
 import { formatTime } from "../utils/Formatters";
 import type { Contestant } from "../types";
 
@@ -12,13 +12,13 @@ const StandingsTable = () => {
 	const [standings, setStandings] = useState<Contestant[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [contestLength, setContestLength] = useState(26);
 
 	const fetchData = async () => {
 		try {
 			setLoading(true);
 			setError(null);
 			if (!contestId) throw new Error("Contest ID is required");
-			console.log(contestId);
 			const data = await getStandings(contestId);
 			setStandings(data);
 		} catch (err) {
@@ -30,18 +30,28 @@ const StandingsTable = () => {
 		}
 	};
 
+	const fetchContestData = async () => {
+		try {
+			const contest = await getContestById(contestId);
+			setContestLength(contest.length);
+		} catch (err) {
+			console.error("Failed to fetch contest data:", err);
+		}
+	};
+
 	useEffect(() => {
 		if (!contestId) {
 			setError("No contest selected");
 			return;
 		}
 
+		fetchContestData();
 		fetchData();
-		const interval = setInterval(fetchData, 30 * 1000); // Refresh every 30 seconds
+		const interval = setInterval(fetchData, 15 * 60 * 1000);
 		return () => clearInterval(interval);
 	}, [contestId]);
 
-	const problems = Array.from({ length: 16 }, (_, i) =>
+	const problems = Array.from({ length: contestLength }, (_, i) =>
 		String.fromCharCode(65 + i)
 	);
 
@@ -92,7 +102,7 @@ const StandingsTable = () => {
 	}
 
 	return (
-		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+		<div className="max-w-[95%]  mx-auto px-4 sm:px-6 lg:px-8 py-12">
 			<div className="mb-8">
 				<Link
 					to="/"
@@ -141,51 +151,55 @@ const StandingsTable = () => {
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
-								{Array.isArray(standings) && standings.map((contestant, index) => (
-									<tr
-										key={contestant.handle}
-										className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-									>
-										<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-											{index + 1}
-										</td>
-										<td className="px-6 py-4 whitespace-nowrap">
-											<div className="flex items-center">
-												<div className="text-sm font-medium text-gray-900">
-													{contestant.display_name}
+								{Array.isArray(standings) &&
+									standings.map((contestant, index) => (
+										<tr
+											key={contestant.handle}
+											className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+										>
+											<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+												{index + 1}
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap">
+												<div className="flex items-center">
+													<div className="text-sm font-medium text-gray-900">
+														{contestant.display_name}
+													</div>
+													<div className="ml-2 text-sm text-gray-500">
+														({contestant.handle})
+													</div>
 												</div>
-												<div className="ml-2 text-sm text-gray-500">
-													({contestant.handle})
-												</div>
-											</div>
-										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-											{contestant.total_solved}
-										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-											{formatTime(contestant.total_time)}
-										</td>
-										{problems.map((_, problemIndex) => {
-											const status = getProblemStatus(contestant, problemIndex);
-											return (
-												<td
-													key={problemIndex}
-													className={`px-4 py-4 text-center text-sm ${
-														status.solved
-															? status.first
-																? "bg-green-600 text-white"
-																: "bg-green-100 text-green-800"
-															: status.attempted
-															? "bg-red-100 text-red-800"
-															: ""
-													}`}
-												>
-													{status.solved ? "✓" : status.attempted ? "✗" : ""}
-												</td>
-											);
-										})}
-									</tr>
-								))}
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+												{contestant.total_solved}
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+												{formatTime(contestant.total_time)}
+											</td>
+											{problems.map((_, problemIndex) => {
+												const status = getProblemStatus(
+													contestant,
+													problemIndex
+												);
+												return (
+													<td
+														key={problemIndex}
+														className={`px-4 py-4 text-center text-sm ${
+															status.solved
+																? status.first
+																	? "bg-green-600 text-white"
+																	: "bg-green-100 text-green-800"
+																: status.attempted
+																? "bg-red-100 text-red-800"
+																: ""
+														}`}
+													>
+														{status.solved ? "✓" : status.attempted ? "✗" : ""}
+													</td>
+												);
+											})}
+										</tr>
+									))}
 							</tbody>
 						</table>
 					</div>

@@ -7,12 +7,36 @@ import axios from "axios";
 import { JSDOM } from "jsdom";
 dotenv.config();
 
+
+export const getContestLength = async (id, cookie) => {
+    try {
+        const response = await axios.get(`https://vjudge.net/contest/${id}`, {
+            headers: {
+                accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                Cookie: cookie,
+            },
+        });
+        const dom = new JSDOM(response.data);
+        const textarea = dom.window.document.querySelector('textarea[name="dataJson"]');
+        if (textarea) {
+            const contestData = JSON.parse(textarea.textContent);
+            return contestData.problems.length;
+        } else {
+            console.error("Data not found");
+            return 0;
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        return 0;
+    }
+}
+
+
 export const handleContestData = async (contestId) => {
     const loginUrl = "https://vjudge.net/user/login";
     const contestUrl = `https://vjudge.net/contest/rank/single/${contestId}`;
 
     try {
-        // Login to fetch the cookie
         const payload = {
             username: process.env.user,
             password: process.env.password,
@@ -29,7 +53,6 @@ export const handleContestData = async (contestId) => {
 
         const cookie = loginResponse.headers.get('set-cookie');
 
-        // Fetch standings
         const standingsResponse = await fetch(contestUrl, {
             headers: { Cookie: cookie },
         });
@@ -39,16 +62,12 @@ export const handleContestData = async (contestId) => {
         }
 
         const response = await standingsResponse.json();
-        console.log('Full response:', JSON.stringify(response, null, 2));
-        console.log("================================");
-        console.log("================================");
+        const contestLength = await getContestLength(contestId, cookie);
 
-        // Extract contest details
         const contestName = response.title;
         const contestStartTime = response.begin; // ISO Format
         const contestDuration = response.length / 3600000;
 
-        // Process and transform standings data
         const unifiedData = {};
         const firstSolves = {};
 
@@ -130,8 +149,6 @@ export const handleContestData = async (contestId) => {
             if (a.total_solved !== b.total_solved) return b.total_solved - a.total_solved;
             return a.total_time - b.total_time;
         });
-        console.log(standings);
-        console.log(contestStartTime);
 
         const now = Date.now();
         const contestEnd = contestStartTime + (contestDuration * 3600000);
@@ -144,13 +161,13 @@ export const handleContestData = async (contestId) => {
             contestStatus = 'completed';
         }
 
-
         const contest = new Contest({
             contestId,
             name: contestName,
             startTime: new Date(contestStartTime),
             duration: contestDuration,
             status: contestStatus,
+            length: contestLength,
         });
 
         await contest.save();
@@ -161,38 +178,9 @@ export const handleContestData = async (contestId) => {
         });
 
         await standingsDoc.save();
-        await fs.writeFile(
-            `${contestId}StandingsData.json`,
-            JSON.stringify(standings, null, 4),
-            'utf-8'
-        );
 
         return { contest, standings };
     } catch (error) {
         throw new Error(`Error processing contest data: ${error.message}`);
     }
 };
-
-
-
-export const getContestLength = async (id) => {
-    try {
-        const response = await axios.get(`https://vjudge.net/contest/${id}`, {
-            headers: {
-                accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            },
-        });
-        const dom = new JSDOM(response.data);
-        const textarea = dom.window.document.querySelector('textarea[name="dataJson"]');
-        if (textarea) {
-            const contestData = JSON.parse(textarea.textContent);
-            return contestData.problems.length;
-        } else {
-            console.error("Data not found");
-            return 0;
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        return 0;
-    }
-}

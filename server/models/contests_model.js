@@ -23,6 +23,11 @@ const contestSchema = new mongoose.Schema({
         required: true,
         default: 'upcoming',
     },
+    length: {
+        type: Number,
+        required: true,
+        default: 26,
+    },
     standings: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Standings'
