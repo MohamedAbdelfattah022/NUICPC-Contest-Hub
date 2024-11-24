@@ -4,6 +4,7 @@ import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
 import { getStandings, getContestById } from "../services/api";
 import { formatTime } from "../utils/Formatters";
 import type { Contestant } from "../types";
+import html2canvas from "html2canvas";
 
 const StandingsTable = () => {
 	const location = useLocation();
@@ -13,6 +14,7 @@ const StandingsTable = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [contestLength, setContestLength] = useState(26);
+	const [exporting, setExporting] = useState(false);
 
 	const fetchData = async () => {
 		try {
@@ -71,6 +73,60 @@ const StandingsTable = () => {
 		};
 	};
 
+	const exportToImage = async () => {
+		const standingsTable = document.querySelector(".standings-table-container");
+		if (!(standingsTable instanceof HTMLElement)) return;
+
+		setExporting(true);
+
+		try {
+			const originalPosition = standingsTable.style.position;
+			const originalWidth = standingsTable.style.width;
+			const originalMaxWidth = standingsTable.style.maxWidth;
+			const originalOverflow = standingsTable.style.overflow;
+			const originalTransform = standingsTable.style.transform;
+
+			standingsTable.style.position = "absolute";
+			standingsTable.style.width = "auto";
+			standingsTable.style.maxWidth = "none";
+			standingsTable.style.overflow = "visible";
+			standingsTable.style.transform = "none";
+
+			const fullWidth = standingsTable.scrollWidth;
+			const fullHeight = standingsTable.scrollHeight;
+
+			const canvas = await html2canvas(standingsTable, {
+				scrollX: 0,
+				scrollY: -window.scrollY,
+				windowWidth: fullWidth,
+				windowHeight: fullHeight,
+				width: fullWidth,
+				height: fullHeight,
+				scale: 4,
+				useCORS: true,
+				allowTaint: true,
+				backgroundColor: "#ffffff",
+				logging: false,
+			});
+
+			standingsTable.style.position = originalPosition;
+			standingsTable.style.width = originalWidth;
+			standingsTable.style.maxWidth = originalMaxWidth;
+			standingsTable.style.overflow = originalOverflow;
+			standingsTable.style.transform = originalTransform;
+
+			const image = canvas.toDataURL("image/png", 1.0);
+			const link = document.createElement("a");
+			link.download = `${contestName || "standings"}.png`;
+			link.href = image;
+			link.click();
+		} catch (err) {
+			console.error("Error exporting image:", err);
+		} finally {
+			setExporting(false);
+		}
+	};
+
 	if (error) {
 		return (
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -102,7 +158,7 @@ const StandingsTable = () => {
 	}
 
 	return (
-		<div className="max-w-[95%]  mx-auto px-4 sm:px-6 lg:px-8 py-12">
+		<div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-12">
 			<div className="mb-8">
 				<Link
 					to="/"
@@ -112,13 +168,29 @@ const StandingsTable = () => {
 					Back to Contests
 				</Link>
 				{contestName && (
-					<h1 className="text-2xl font-bold text-gray-900 mt-4">
-						{contestName} Standings
-					</h1>
+					<>
+						<h1 className="text-2xl font-bold text-gray-900 mt-4">
+							{contestName} Standings
+						</h1>
+						<button
+							onClick={exportToImage}
+							disabled={exporting}
+							className={`mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center`}
+						>
+							{exporting ? (
+								<>
+									<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+									Exporting...
+								</>
+							) : (
+								"Export as Image"
+							)}
+						</button>
+					</>
 				)}
 			</div>
 
-			<div className="bg-white shadow-lg rounded-lg overflow-hidden">
+			<div className="standings-table-container bg-white shadow-lg rounded-lg overflow-hidden">
 				{loading ? (
 					<div className="flex items-center justify-center p-8">
 						<Loader2 className="w-8 h-8 animate-spin text-blue-500" />
