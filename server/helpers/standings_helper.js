@@ -11,6 +11,16 @@ export const updateStandings = async (contestId) => {
     const contestUrl = `https://vjudge.net/contest/rank/single/${contestId}`;
 
     try {
+
+        const contest = await Contest.findOne({ contestId });
+        if (!contest) {
+            throw new Error('Contest not found');
+        } else if (contest.status === "completed") {
+            console.log('Contest is completed. Fetching standings from database.');
+            const existingStandings = await Standings.findOne({ 'contest': contest._id });
+            return existingStandings.standings;
+        }
+
         const payload = {
             username: process.env.user,
             password: process.env.password,
@@ -119,10 +129,7 @@ export const updateStandings = async (contestId) => {
             return a.total_time - b.total_time;
         });
 
-        const contest = await Contest.findOne({ contestId });
-        if (!contest) {
-            throw new Error('Contest not found');
-        }
+
 
         const existingStandings = await Standings.findOne({ 'contest': contest._id });
         if (existingStandings) {
