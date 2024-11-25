@@ -1,17 +1,9 @@
-import fetch from 'node-fetch';
 import Contest from '../models/contests_model.js';
 import Standings from '../models/standings_model.js';
-import * as dotenv from 'dotenv';
-dotenv.config();
-
+import authService from '../services/authService.js';
 
 export const updateStandings = async (contestId) => {
-
-    const loginUrl = "https://vjudge.net/user/login";
-    const contestUrl = `https://vjudge.net/contest/rank/single/${contestId}`;
-
     try {
-
         const contest = await Contest.findOne({ contestId });
         if (!contest) {
             throw new Error('Contest not found');
@@ -21,46 +13,40 @@ export const updateStandings = async (contestId) => {
             return existingStandings.standings;
         }
 
-        const payload = {
-            username: process.env.user,
-            password: process.env.password,
-        };
-        const loginResponse = await fetch(loginUrl, {
-            method: 'POST',
-            body: new URLSearchParams(payload),
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        });
-
-        if (!loginResponse.ok) {
-            throw new Error("Login failed.");
-        }
-
-        const cookie = loginResponse.headers.get('set-cookie');
-
-        const standingsResponse = await fetch(contestUrl, {
-            headers: { Cookie: cookie },
-        });
-
-        if (!standingsResponse.ok) {
-            throw new Error("Failed to fetch contest standings.");
-        }
-
-        const response = await standingsResponse.json();
+        const contestUrl = `https://vjudge.net/contest/rank/single/${contestId}`;
+        const response = await authService.makeAuthenticatedRequest(contestUrl);
+        const data = await response.json();
 
         const unifiedData = {};
-        const firstSolves = {};
+        const firstSolvesByProblem = new Map();
 
-        for (const [participantId, info] of Object.entries(response.participants)) {
+        for (const [participantId, info] of Object.entries(data.participants)) {
             unifiedData[participantId] = {
                 handle: info[0],
                 display_name: info[1],
                 submissions: [],
                 first_solves: [],
                 attempted_problems: [],
+                solved_times: new Map()
             };
         }
 
-        for (const submission of response.submissions) {
+        for (const submission of data.submissions) {
+            const [participantId, problemIndex, status, time] = submission;
+
+            if (status === 1) {
+                const participant = unifiedData[participantId];
+                if (!participant.solved_times.has(problemIndex) || time < participant.solved_times.get(problemIndex)) {
+                    participant.solved_times.set(problemIndex, time);
+                }
+
+                if (!firstSolvesByProblem.has(problemIndex) || time < firstSolvesByProblem.get(problemIndex).time) {
+                    firstSolvesByProblem.set(problemIndex, { participantId, time });
+                }
+            }
+        }
+
+        for (const submission of data.submissions) {
             const [participantId, problemIndex, status, time] = submission;
             const submissionEntry = { problem_index: problemIndex, status, time };
 
@@ -71,6 +57,7 @@ export const updateStandings = async (contestId) => {
                     submissions: [submissionEntry],
                     first_solves: [],
                     attempted_problems: status !== 1 ? [problemIndex] : [],
+                    solved_times: new Map()
                 };
             } else {
                 unifiedData[participantId].submissions.push(submissionEntry);
@@ -81,8 +68,9 @@ export const updateStandings = async (contestId) => {
             }
 
             if (status === 1) {
-                if (!firstSolves[problemIndex] || time < firstSolves[problemIndex].time) {
-                    firstSolves[problemIndex] = { participant_id: participantId, time };
+                const firstSolve = firstSolvesByProblem.get(problemIndex);
+                if (firstSolve && firstSolve.participantId === participantId && firstSolve.time === time) {
+                    unifiedData[participantId].first_solves.push(problemIndex);
                 }
 
                 const index = unifiedData[participantId].attempted_problems.indexOf(problemIndex);
@@ -95,18 +83,10 @@ export const updateStandings = async (contestId) => {
         const standings = Object.entries(unifiedData).map(([participantId, data]) => {
             const solvedProblems = new Set();
             let totalTimePenalty = 0;
-            const firstSolvedProblems = new Set();
 
-            for (const submission of data.submissions) {
-                if (submission.status === 1) {
-                    const problemIndex = submission.problem_index;
-                    solvedProblems.add(problemIndex);
-                    totalTimePenalty += submission.time;
-
-                    if (firstSolves[problemIndex]?.participant_id === participantId) {
-                        firstSolvedProblems.add(problemIndex);
-                    }
-                }
+            for (const [problemIndex, solveTime] of data.solved_times) {
+                solvedProblems.add(problemIndex);
+                totalTimePenalty += solveTime;
             }
 
             data.attempted_problems = data.attempted_problems.filter(
@@ -119,7 +99,7 @@ export const updateStandings = async (contestId) => {
                 total_solved: solvedProblems.size,
                 total_time: totalTimePenalty,
                 solved_problems: Array.from(solvedProblems),
-                first_solves: Array.from(firstSolvedProblems),
+                first_solves: data.first_solves,
                 attempted_problems: data.attempted_problems,
             };
         });
@@ -128,8 +108,6 @@ export const updateStandings = async (contestId) => {
             if (a.total_solved !== b.total_solved) return b.total_solved - a.total_solved;
             return a.total_time - b.total_time;
         });
-
-
 
         const existingStandings = await Standings.findOne({ 'contest': contest._id });
         if (existingStandings) {
