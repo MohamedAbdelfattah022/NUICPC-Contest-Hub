@@ -118,6 +118,11 @@ export const deleteUser = async (id: string): Promise<void> => {
 	}
 };
 
+export const createBulkUsers = async (users: Omit<User, "_id">[]) => {
+	const response = await api.post("/users/bulk", { users });
+	return response.data;
+};
+
 const handleApiError = (error: unknown): Error => {
 	if (axios.isAxiosError(error)) {
 		const message = error.response?.data?.message || error.message;
