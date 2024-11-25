@@ -1,6 +1,11 @@
 import User from "../models/users_model.js"
 import mongoose from "mongoose";
 
+const validPhoneNumber = (phoneNumber) => {
+    const regex = /^01[0125][0-9]{8}$/;
+    return regex.test(phoneNumber.toString());
+}
+
 export const getUsers = async (req, res) => {
     try {
         const users = await User.find().select('-__v');
@@ -23,6 +28,14 @@ export const addUser = async (req, res) => {
     const user = req.body;
     const newUser = new User(user);
     try {
+        if (!validPhoneNumber(user.phone)) {
+            return res.status(400).json({ message: "Invalid phone number" });
+        }
+        const existingUser = await User.findOne({ phone: user.phone });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+
         await newUser.save();
         res.status(201).json({
             message: "User Added Successfully",
@@ -65,10 +78,6 @@ export const deleteUser = async (req, res) => {
 }
 
 
-const validPhoneNumber = (phoneNumber) => {
-    const regex = /^01[0125][0-9]{8}$/;
-    return regex.test(phoneNumber.toString());
-}
 
 
 const validateUserData = (userData) => {
