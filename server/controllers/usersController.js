@@ -31,9 +31,18 @@ export const addUser = async (req, res) => {
         if (!validPhoneNumber(user.phone)) {
             return res.status(400).json({ message: "Invalid phone number" });
         }
-        const existingUser = await User.findOne({ phone: user.phone });
+        const existingUser = await User.findOne({
+            $or: [
+                { phone: user.phone },
+                { handle: user.handle }
+            ]
+        });
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({
+                message: existingUser.phone === user.phone ?
+                    "Phone number already exists" :
+                    "Handle already exists"
+            });
         }
 
         await newUser.save();
@@ -44,8 +53,7 @@ export const addUser = async (req, res) => {
     } catch (error) {
         res.status(409).json({ message: error.message });
     }
-
-};
+}
 
 export const updateUser = async (req, res) => {
     const { id } = req.params;
@@ -77,40 +85,37 @@ export const deleteUser = async (req, res) => {
     }
 }
 
-
-
-
 const validateUserData = (userData) => {
     const trimmedName = String(userData.name || "").trim();
+    const trimmedHandle = String(userData.handle || "").trim();
     const trimmedPhone = String(userData.phone || "").trim();
     const trimmedLevel = String(userData.level || "").trim().toLowerCase();
+    const groupValue = Number(userData.group || 0);
 
-    if (!trimmedName && !trimmedPhone && !trimmedLevel) {
-        return { isValid: false, error: "Empty user data" };
-    }
-
-    if (!trimmedName) {
-        return { isValid: false, error: "Name is required" };
-    }
-
-    if (!trimmedPhone) {
-        return { isValid: false, error: "Phone number is required" };
+    if (!trimmedName || !trimmedHandle || !trimmedPhone || !trimmedLevel) {
+        return { isValid: false, error: "All fields are required" };
     }
 
     if (!validPhoneNumber(trimmedPhone)) {
         return { isValid: false, error: "Phone number is invalid" };
     }
 
-    if (!["beginner", "intermediate", "advanced"].includes(trimmedLevel)) {
+    if (!["beginner", "intermediate", "advanced", "general"].includes(trimmedLevel)) {
         return { isValid: false, error: "Invalid level. Must be beginner, intermediate, or advanced" };
+    }
+
+    if (isNaN(groupValue)) {
+        return { isValid: false, error: "Group must be a number" };
     }
 
     return {
         isValid: true,
         data: {
             name: trimmedName,
+            handle: trimmedHandle,
             phone: trimmedPhone,
-            level: trimmedLevel
+            level: trimmedLevel,
+            group: groupValue
         }
     };
 };
@@ -125,9 +130,13 @@ export const addBulkUsers = async (req, res) => {
     const validatedUsers = [];
     const invalidUsers = [];
     const seenPhones = new Set();
+    const seenHandles = new Set();
 
     const existingPhones = await User.distinct("phone");
+    const existingHandles = await User.distinct("handle");
+
     existingPhones.forEach(phone => seenPhones.add(phone));
+    existingHandles.forEach(handle => seenHandles.add(handle));
 
     users.forEach((userData, index) => {
         const validation = validateUserData(userData);
@@ -139,8 +148,16 @@ export const addBulkUsers = async (req, res) => {
                     error: "Duplicate phone number"
                 });
             }
+            else if (seenHandles.has(validation.data.handle)) {
+                invalidUsers.push({
+                    rowIndex: index + 1,
+                    data: userData,
+                    error: "Duplicate handle"
+                });
+            }
             else {
                 seenPhones.add(validation.data.phone);
+                seenHandles.add(validation.data.handle);
                 validatedUsers.push(validation.data);
             }
         } else {

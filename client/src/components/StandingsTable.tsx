@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
-import { getStandings, getContestById } from "../services/api";
+import { Loader2, ArrowLeft, AlertCircle, Download } from "lucide-react";
+import { getStandings, getContestById, getUsers } from "../services/api";
 import { formatTime } from "../utils/Formatters";
-import type { Contestant } from "../types";
+import type { Contestant, User } from "../types";
 import html2canvas from "html2canvas";
+import Papa from "papaparse";
 
 const StandingsTable = () => {
 	const location = useLocation();
 	const contestId = location.state?.contestId;
 	const contestName = location.state?.contestName;
 	const [standings, setStandings] = useState<Contestant[]>([]);
+	const [users, setUsers] = useState<User[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [contestLength, setContestLength] = useState(26);
@@ -21,8 +23,25 @@ const StandingsTable = () => {
 			setLoading(true);
 			setError(null);
 			if (!contestId) throw new Error("Contest ID is required");
-			const data = await getStandings(contestId);
-			setStandings(data);
+
+			const [standingsData, usersData] = await Promise.all([
+				getStandings(contestId),
+				getUsers(),
+			]);
+
+			// Create a case-insensitive map of users by handle
+			const userMap = new Map(
+				usersData.map((user) => [user.handle.toLowerCase(), user])
+			);
+
+			// Enrich standings with user data
+			const enrichedStandings = standingsData.map((contestant) => ({
+				...contestant,
+				user: userMap.get(contestant.handle.toLowerCase()),
+			}));
+
+			setStandings(enrichedStandings);
+			setUsers(usersData);
 		} catch (err) {
 			const errorMessage =
 				err instanceof Error ? err.message : "Failed to fetch standings data";
@@ -127,6 +146,41 @@ const StandingsTable = () => {
 		}
 	};
 
+	const exportToCSV = () => {
+		try {
+			setExporting(true);
+			const exportData = standings.map((contestant) => {
+				const user = users.find(
+					(u) => u.handle.toLowerCase() === contestant.handle.toLowerCase()
+				);
+
+				return {
+					Name: user?.name || contestant.display_name,
+					Phone: user?.phone.toString() || "N/A",
+					Handle: contestant.handle,
+					"Solved Problems": contestant.total_solved,
+					Group: user?.group,
+				};
+			});
+
+			const csv = Papa.unparse(exportData);
+			const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+			const link = document.createElement("a");
+			const url = URL.createObjectURL(blob);
+
+			link.setAttribute("href", url);
+			link.setAttribute("download", `${contestName || "standings"}_export.csv`);
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Export error:", error);
+		} finally {
+			setExporting(false);
+		}
+	};
+
 	if (error) {
 		return (
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -172,20 +226,42 @@ const StandingsTable = () => {
 						<h1 className="text-2xl font-bold text-gray-900 mt-4">
 							{contestName} Standings
 						</h1>
-						<button
-							onClick={exportToImage}
-							disabled={exporting}
-							className={`mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center`}
-						>
-							{exporting ? (
-								<>
-									<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-									Exporting...
-								</>
-							) : (
-								"Export as Image"
-							)}
-						</button>
+						<div className="flex space-x-4 mt-2">
+							<button
+								onClick={exportToImage}
+								disabled={exporting}
+								className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center`}
+							>
+								{exporting ? (
+									<>
+										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+										Exporting...
+									</>
+								) : (
+									<>
+										<Download className="w-4 h-4 mr-2" />
+										Export as Image
+									</>
+								)}
+							</button>
+							<button
+								onClick={exportToCSV}
+								disabled={exporting}
+								className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center`}
+							>
+								{exporting ? (
+									<>
+										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+										Exporting...
+									</>
+								) : (
+									<>
+										<Download className="w-4 h-4 mr-2" />
+										Export as CSV
+									</>
+								)}
+							</button>
+						</div>
 					</>
 				)}
 			</div>

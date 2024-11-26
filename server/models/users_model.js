@@ -5,14 +5,21 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    handle: {
+        type: String,
+        required: true,
+    },
     phone: {
         type: String,
         required: true,
     },
     level: {
         type: String,
-        enum: ['beginner', 'intermediate', 'advanced'],
+        enum: ['beginner', 'intermediate', 'advanced', 'general'],
         required: true,
+    },
+    group: {
+        type: Number,
     }
 });
 

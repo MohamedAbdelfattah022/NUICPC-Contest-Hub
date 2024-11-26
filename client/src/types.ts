@@ -10,8 +10,10 @@ export interface Contest {
 export interface User {
 	_id: string;
 	name: string;
+	handle: string;
 	phone: string;
-	level: "beginner" | "intermediate" | "advanced";
+	level: "beginner" | "intermediate" | "advanced" | "general";
+	group: number;
 }
 
 export interface Contestant {

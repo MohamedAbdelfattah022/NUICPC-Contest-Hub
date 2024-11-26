@@ -10,25 +10,19 @@ interface UserModalProps {
 const UserModal = ({ user, onSave, onClose }: UserModalProps) => {
 	const [formData, setFormData] = useState<User>({
 		name: "",
+		handle: "",
 		phone: "",
-		level: "beginner",
+		level: "general",
 	});
 
 	useEffect(() => {
 		if (user) {
 			setFormData(user);
-		} else {
-			setFormData({
-				...formData,
-			});
 		}
 	}, [user]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!formData.name || !formData.phone) {
-			return;
-		}
 		onSave(formData);
 	};
 
@@ -48,6 +42,20 @@ const UserModal = ({ user, onSave, onClose }: UserModalProps) => {
 							value={formData.name}
 							onChange={(e) =>
 								setFormData({ ...formData, name: e.target.value })
+							}
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							required
+						/>
+					</div>
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							VJudge Handle
+						</label>
+						<input
+							type="text"
+							value={formData.handle}
+							onChange={(e) =>
+								setFormData({ ...formData, handle: e.target.value })
 							}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							required
@@ -84,7 +92,22 @@ const UserModal = ({ user, onSave, onClose }: UserModalProps) => {
 							<option value="beginner">Beginner</option>
 							<option value="intermediate">Intermediate</option>
 							<option value="advanced">Advanced</option>
+							<option value="general">General</option>
 						</select>
+					</div>
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-1">
+							Group Number
+						</label>
+						<input
+							type="number"
+							min="1"
+							value={formData.group}
+							onChange={(e) =>
+								setFormData({ ...formData, group: parseInt(e.target.value) })
+							}
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						/>
 					</div>
 					<div className="mt-6 flex justify-end space-x-4">
 						<button
@@ -106,4 +129,5 @@ const UserModal = ({ user, onSave, onClose }: UserModalProps) => {
 		</div>
 	);
 };
+
 export default UserModal;

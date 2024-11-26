@@ -125,7 +125,7 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 				);
 			}
 
-			const requiredFields = ["name", "phone", "level"];
+			const requiredFields = ["name", "handle", "phone", "level"];
 			const headers = Object.keys(data[0]).map((h) => h.toLowerCase());
 			const missingFields = requiredFields.filter(
 				(field) => !headers.includes(field)
@@ -135,7 +135,12 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 				throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
 			}
 
-			setPreview(data);
+			const processedData = data.map((row) => ({
+				...row,
+				group: row.group || 1,
+			}));
+
+			setPreview(processedData);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Unknown error occurred");
 			setPreview([]);
@@ -162,18 +167,19 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 
 	const downloadFailures = () => {
 		if (!importResult?.failures) return;
-		console.log(importResult);
+
 		const csvData = importResult.failures.details.map((detail) => ({
 			Row: detail.rowIndex,
 			Name: detail.data.name || "",
+			Handle: detail.data.handle || "",
 			Phone: detail.data.phone || "",
 			Level: detail.data.level || "",
+			Group: detail.data.group || "",
 			Error: detail.error || "Unknown error",
 		}));
 
-		const csvContent = Papa.unparse(csvData);
-
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+		const csv = Papa.unparse(csvData);
+		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 		const link = document.createElement("a");
 		const url = URL.createObjectURL(blob);
 
@@ -217,7 +223,7 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
 			<div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
 				<div className="flex justify-between items-center mb-4 sm:mb-6">
-					<h2 className="text-xl sm:text-2xl font-bold">Import Users</h2>
+					<h2 className="text-xl sm:text-2xl font-bold">Bulk Import Users</h2>
 					<button
 						onClick={onClose}
 						className="text-gray-500 hover:text-gray-700"
@@ -256,7 +262,7 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 								</p>
 								<p className="text-xs sm:text-sm text-gray-500">
 									Accepts CSV or Excel files (.csv, .xlsx, .xls) with headers:
-									name, phone, level
+									name, handle, phone, level, group (optional)
 								</p>
 							</>
 						)}
@@ -311,10 +317,16 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 														Name
 													</th>
 													<th className="px-3 py-2 text-left text-xs font-medium text-amber-700 uppercase">
+														Handle
+													</th>
+													<th className="px-3 py-2 text-left text-xs font-medium text-amber-700 uppercase">
 														Phone
 													</th>
 													<th className="px-3 py-2 text-left text-xs font-medium text-amber-700 uppercase">
 														Level
+													</th>
+													<th className="px-3 py-2 text-left text-xs font-medium text-amber-700 uppercase">
+														Group
 													</th>
 													<th className="px-3 py-2 text-left text-xs font-medium text-amber-700 uppercase">
 														Error
@@ -334,10 +346,16 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 															{failure.data.name}
 														</td>
 														<td className="px-3 py-2 text-sm text-amber-900">
+															{failure.data.handle}
+														</td>
+														<td className="px-3 py-2 text-sm text-amber-900">
 															{failure.data.phone}
 														</td>
 														<td className="px-3 py-2 text-sm text-amber-900">
 															{failure.data.level}
+														</td>
+														<td className="px-3 py-2 text-sm text-amber-900">
+															{failure.data.group || "N/A"}
 														</td>
 														<td className="px-3 py-2 text-sm text-amber-900">
 															{failure.error}
@@ -377,10 +395,16 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 											Name
 										</th>
 										<th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Handle
+										</th>
+										<th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Phone
 										</th>
 										<th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Level
+										</th>
+										<th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Group
 										</th>
 									</tr>
 								</thead>
@@ -391,10 +415,16 @@ const BulkImportModal = ({ onImport, onClose }: BulkImportModalProps) => {
 												{user.name}
 											</td>
 											<td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm">
+												{user.handle}
+											</td>
+											<td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm">
 												{user.phone}
 											</td>
 											<td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm">
 												{user.level}
+											</td>
+											<td className="px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm">
+												{user.group || 1}
 											</td>
 										</tr>
 									))}
