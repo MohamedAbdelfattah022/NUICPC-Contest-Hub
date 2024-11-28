@@ -2,9 +2,10 @@ import Contest from "../models/contests_model.js";
 import Standings from "../models/standings_model.js";
 import { updateStandings } from '../helpers/standings_helper.js';
 import mongoose from "mongoose";
+import { Cache } from "../services/caching_service.js";
 
-const standingsCache = new Map();
 const CACHE_DURATION = 15 * 60 * 1000;
+const standingsCache = new Cache(CACHE_DURATION);
 
 export const getStandings = async (req, res) => {
     try {

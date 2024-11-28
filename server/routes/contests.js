@@ -6,15 +6,18 @@ import {
     updateContest,
     deleteContest
 } from '../controllers/contestController.js';
+import { verifyToken } from '../middleware/auth_middleware.js';
 
 const router = express.Router();
 
+
+
 router.get('/', getAllContests);
-router.post('/', createContest);
-
 router.get('/:id', getContestById);
-router.put('/:id', updateContest);
-router.delete('/:id', deleteContest);
 
+router.post('/', createContest);
+router.put('/:id', updateContest);
+// router.use(verifyToken);
+router.delete('/:id', deleteContest);
 
 export default router;
