@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import contestRoutes from './routes/contests.js';
 import standingsRoutes from './routes/standings.js';
 import UsersRoutes from './routes/users.js';
+import adminRoutes from './routes/admin.js';
 
 env.config();
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/api/contests', contestRoutes);
 app.use('/api/standings', standingsRoutes);
 app.use('/api/users', UsersRoutes);
+app.use('/api/admin', adminRoutes);
 
 mongoose.connect(process.env.CONNECTION_STRING)
     .then(() => console.log('Connected to MongoDB'))

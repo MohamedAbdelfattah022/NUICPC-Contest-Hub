@@ -3,7 +3,7 @@ import { useLocation, Link } from "react-router-dom";
 import { Loader2, ArrowLeft, AlertCircle, Download } from "lucide-react";
 import { getStandings, getContestById, getUsers } from "../services/api";
 import { formatTime } from "../utils/Formatters";
-import type { Contestant, User } from "../types";
+import type { Contestant } from "../types";
 import html2canvas from "html2canvas";
 import Papa from "papaparse";
 
@@ -12,11 +12,16 @@ const StandingsTable = () => {
 	const contestId = location.state?.contestId;
 	const contestName = location.state?.contestName;
 	const [standings, setStandings] = useState<Contestant[]>([]);
-	const [users, setUsers] = useState<User[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [contestLength, setContestLength] = useState(26);
 	const [exporting, setExporting] = useState(false);
+	const [isAdmin, setIsAdmin] = useState(false);
+
+	useEffect(() => {
+		const token = localStorage.getItem("accessToken");
+		setIsAdmin(!!token);
+	}, []);
 
 	const fetchData = async () => {
 		try {
@@ -24,24 +29,9 @@ const StandingsTable = () => {
 			setError(null);
 			if (!contestId) throw new Error("Contest ID is required");
 
-			const [standingsData, usersData] = await Promise.all([
-				getStandings(contestId),
-				getUsers(),
-			]);
+			const standingsData = await getStandings(contestId);
 
-			// Create a case-insensitive map of users by handle
-			const userMap = new Map(
-				usersData.map((user) => [user.handle.toLowerCase(), user])
-			);
-
-			// Enrich standings with user data
-			const enrichedStandings = standingsData.map((contestant) => ({
-				...contestant,
-				user: userMap.get(contestant.handle.toLowerCase()),
-			}));
-
-			setStandings(enrichedStandings);
-			setUsers(usersData);
+			setStandings(standingsData);
 		} catch (err) {
 			const errorMessage =
 				err instanceof Error ? err.message : "Failed to fetch standings data";
@@ -146,11 +136,15 @@ const StandingsTable = () => {
 		}
 	};
 
-	const exportToCSV = () => {
+	const exportToCSV = async () => {
+		if (!isAdmin) return;
+
 		try {
 			setExporting(true);
+			const freshUsersData = await getUsers();
+
 			const exportData = standings.map((contestant) => {
-				const user = users.find(
+				const user = freshUsersData.find(
 					(u) => u.handle.toLowerCase() === contestant.handle.toLowerCase()
 				);
 
@@ -244,23 +238,25 @@ const StandingsTable = () => {
 									</>
 								)}
 							</button>
-							<button
-								onClick={exportToCSV}
-								disabled={exporting}
-								className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center`}
-							>
-								{exporting ? (
-									<>
-										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-										Exporting...
-									</>
-								) : (
-									<>
-										<Download className="w-4 h-4 mr-2" />
-										Export as CSV
-									</>
-								)}
-							</button>
+							{isAdmin && (
+								<button
+									onClick={exportToCSV}
+									disabled={exporting}
+									className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center`}
+								>
+									{exporting ? (
+										<>
+											<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+											Exporting...
+										</>
+									) : (
+										<>
+											<Download className="w-4 h-4 mr-2" />
+											Export as CSV
+										</>
+									)}
+								</button>
+							)}
 						</div>
 					</>
 				)}

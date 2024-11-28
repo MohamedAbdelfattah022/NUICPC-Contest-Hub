@@ -1,5 +1,9 @@
 import User from "../models/users_model.js"
 import mongoose from "mongoose";
+import { Cache } from "../services/caching_service.js";
+
+const CACHE_DURATION = 7 * 86400000;
+const userCache = new Cache(CACHE_DURATION);
 
 const validPhoneNumber = (phoneNumber) => {
     const regex = /^01[0125][0-9]{8}$/;
@@ -8,7 +12,14 @@ const validPhoneNumber = (phoneNumber) => {
 
 export const getUsers = async (req, res) => {
     try {
+        const cachedUsers = userCache.get("users");
+        if (cachedUsers) {
+            console.log("User Cache Hit");
+            return res.status(200).json(cachedUsers);
+        }
+
         const users = await User.find().select('-__v');
+        userCache.set("users", users);
         res.status(200).json(users);
     } catch (error) {
         res.status(404).json({ message: error.message });
@@ -17,7 +28,17 @@ export const getUsers = async (req, res) => {
 
 export const getUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-__v');
+        const id = req.params.id;
+        const cachedUser = userCache.get(id);
+        if (cachedUser) {
+            console.log("get User by id Cache Hit");
+            return res.status(200).json(cachedUser);
+        }
+        const user = await User.findById(id).select('-__v');
+        if (!user)
+            return res.status(404).json({ message: "User not found" });
+
+        userCache.set(id, user);
         res.status(200).json(user);
     } catch (error) {
         res.status(404).json({ message: error.message });
@@ -46,6 +67,7 @@ export const addUser = async (req, res) => {
         }
 
         await newUser.save();
+        userCache.invalidate("users");
         res.status(201).json({
             message: "User Added Successfully",
             newUser
@@ -65,6 +87,10 @@ export const updateUser = async (req, res) => {
             updatedData,
             { new: true }
         );
+
+        userCache.set(id, updatedUser);
+        userCache.invalidate("users");
+
         res.status(200).json({
             message: "User Updated Successfully",
             user: updatedUser
@@ -79,6 +105,9 @@ export const deleteUser = async (req, res) => {
 
     try {
         await User.findByIdAndDelete(id);
+
+        userCache.invalidate(id);
+        userCache.invalidate("users");
         res.status(200).json({ message: "User Deleted Successfully" });
     } catch (error) {
         res.status(404).json({ message: error.message });
@@ -132,8 +161,19 @@ export const addBulkUsers = async (req, res) => {
     const seenPhones = new Set();
     const seenHandles = new Set();
 
-    const existingPhones = await User.distinct("phone");
-    const existingHandles = await User.distinct("handle");
+    const existingPhones = userCache.get("existingPhones");
+    const existingHandles = userCache.get("existingHandles");
+
+    if (!existingPhones) {
+        existingPhones = await User.distinct("phone");
+        userCache.set("existingPhones", existingPhones);
+    }
+
+    if (!existingHandles) {
+        existingHandles = await User.distinct("handle");
+        userCache.set("existingPhones", existingHandles);
+    }
+
 
     existingPhones.forEach(phone => seenPhones.add(phone));
     existingHandles.forEach(handle => seenHandles.add(handle));
@@ -173,6 +213,11 @@ export const addBulkUsers = async (req, res) => {
         let insertedUsers = [];
         if (validatedUsers.length > 0) {
             insertedUsers = await User.insertMany(validatedUsers);
+
+            const newPhones = validatedUsers.map(user => user.phone);
+            const newHandles = validatedUsers.map(user => user.handle);
+            userCache.set("existingPhones", [...existingPhones, ...newPhones]);
+            userCache.set("existingHandles", [...existingHandles, ...newHandles]);
         }
 
         const response = {
