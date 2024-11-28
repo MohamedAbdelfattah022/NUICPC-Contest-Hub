@@ -1,7 +1,7 @@
 import { rateLimit } from "express-rate-limit";
 import bycrypt from "bcryptjs";
 import Admin from "../models/admin_model.js";
-import { loginAdmin, logoutAdmin, verifySession } from '../services/auth_service.js';
+import { loginAdmin, logoutAdmin } from '../services/auth_service.js';
 import { validateEmail, validatePassword } from '../utils/validators.js';
 import { sanitizeInput } from '../utils/sanitizers.js';
 

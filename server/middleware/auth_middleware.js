@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import Session from '../models/session_model.js';
-// import { createAuditLog } from '../services/audit_service.js';
 
 export const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -38,26 +37,3 @@ export const verifyToken = async (req, res, next) => {
         return res.status(401).json({ message: 'Invalid token' });
     }
 };
-
-// export const auditMiddleware = (action) => async (req, res, next) => {
-//     const originalJson = res.json;
-//     res.json = async function (data) {
-//         res.json = originalJson;
-//         if (res.statusCode < 400) {
-//             await createAuditLog({
-//                 adminId: req.admin.adminId,
-//                 action,
-//                 details: {
-//                     method: req.method,
-//                     path: req.path,
-//                     body: req.body,
-//                     response: data
-//                 },
-//                 ip: req.ip,
-//                 userAgent: req.headers['user-agent']
-//             });
-//         }
-//         return res.json(data);
-//     };
-//     next();
-// }
