@@ -31,6 +31,8 @@ export const getStandings = async (req, res) => {
         }
 
         try {
+            console.log("Fetching standings from external API...");
+            
             const standings = await updateStandings(contest.contestId);
             standingsCache.set(id, {
                 standings,
