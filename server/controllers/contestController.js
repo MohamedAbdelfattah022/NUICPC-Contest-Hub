@@ -2,7 +2,10 @@ import Contest from "../models/contests_model.js";
 import Standings from "../models/standings_model.js";
 import mongoose from "mongoose";
 import { handleContestData } from '../helpers/contests_helper.js';
+import { Cache } from "../services/caching_service.js";
 
+const contestCache = new Cache();
+const namespace = "contest";
 
 export const createContest = async (req, res) => {
     try {
@@ -19,6 +22,8 @@ export const createContest = async (req, res) => {
 
         const { contest, standings } = await handleContestData(contestId);
 
+        contestCache.invalidate(namespace);
+
         res.status(201).json({
             message: 'Contest created successfully',
             contest,
@@ -34,6 +39,11 @@ export const createContest = async (req, res) => {
 
 export const getAllContests = async (req, res) => {
     try {
+        const cachedContests = contestCache.get(namespace);
+        if (cachedContests) {
+            console.log("Contest Cache Hit");
+            return res.status(200).json(cachedContests);
+        }
         const {
             status,
             sortBy = 'startTime',
@@ -59,14 +69,17 @@ export const getAllContests = async (req, res) => {
 
         const totalContests = await Contest.countDocuments(filter);
 
-        res.status(200).json({
+        const response = {
             contests,
             pagination: {
                 currentPage: pageNumber,
                 totalPages: Math.ceil(totalContests / pageLimit),
                 totalContests
             }
-        });
+        };
+
+        contestCache.set(namespace, response);
+        res.status(200).json(response);
     } catch (error) {
         res.status(500).json({
             message: 'Error fetching contests',
@@ -81,6 +94,12 @@ export const getContestById = async (req, res) => {
     try {
         const { id } = req.params;
 
+        const cachedContest = contestCache.get(id);
+        if (cachedContest) {
+            console.log("get Contest by id Cache Hit");
+            return res.status(200).json(cachedContest);
+        }
+
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 message: 'Invalid Contest ID'
@@ -93,7 +112,7 @@ export const getContestById = async (req, res) => {
                 message: 'Contest not found'
             });
         }
-
+        contestCache.set(id, contest);
         res.status(200).json({ contest });
     } catch (error) {
         res.status(500).json({
@@ -133,6 +152,9 @@ export const updateContest = async (req, res) => {
             });
         }
 
+        contestCache.invalidate(namespace);
+        contestCache.set(id, updatedContest);
+
         res.status(200).json({
             message: 'Contest updated successfully',
             contest: updatedContest
@@ -163,6 +185,9 @@ export const deleteContest = async (req, res) => {
             });
         }
 
+        contestCache.invalidate(namespace);
+        contestCache.invalidate(id);
+
         res.status(200).json({
             message: 'Contest deleted successfully',
             contest: deletedContest
@@ -173,15 +198,4 @@ export const deleteContest = async (req, res) => {
             error: error.message
         });
     }
-};
-
-
-
-
-export default {
-    createContest,
-    getAllContests,
-    getContestById,
-    updateContest,
-    deleteContest
 };

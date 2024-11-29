@@ -29,6 +29,11 @@ class AuthService {
     }
 
     async _login() {
+        console.log("================================================");
+        console.log("Logging in to VJudge...");
+        console.log("================================================");
+
+
         const loginUrl = "https://vjudge.net/user/login";
         const payload = {
             username: process.env.VJUDGE_USERNAME,
