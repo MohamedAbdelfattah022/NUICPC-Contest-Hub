@@ -1,8 +1,20 @@
 export const formatTime = (seconds: number): string => {
-	const hours = Math.floor(seconds / 3600);
-	const minutes = Math.floor((seconds % 3600) / 60);
+	const date = new Date(seconds * 1000);
 
-	return `${hours}:${minutes.toString().padStart(2, "0")}`;
+	const days = Math.floor(seconds / (24 * 3600));
+	const hours = date.getUTCHours();
+	const minutes = date.getUTCMinutes();
+	const remainingSeconds = date.getUTCSeconds();
+
+	if (days > 0) {
+		return `${days}:${hours.toString().padStart(2, "0")}:${minutes
+			.toString()
+			.padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+	} else {
+		return `${hours.toString().padStart(2, "0")}:${minutes
+			.toString()
+			.padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+	}
 };
 
 export const formatDuration = (duration: number) => {
