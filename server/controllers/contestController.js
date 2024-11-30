@@ -5,7 +5,7 @@ import { handleContestData } from '../helpers/contests_helper.js';
 import { Cache } from "../services/caching_service.js";
 
 const contestCache = new Cache();
-const namespace = "contest";
+const cacheKey = 'contests';
 
 export const createContest = async (req, res) => {
     try {
@@ -22,7 +22,9 @@ export const createContest = async (req, res) => {
 
         const { contest, standings } = await handleContestData(contestId);
 
-        contestCache.invalidate(namespace);
+        contestCache.invalidate(cacheKey);
+        
+        contestCache.set(contest._id.toString(), contest);
 
         res.status(201).json({
             message: 'Contest created successfully',
@@ -39,11 +41,6 @@ export const createContest = async (req, res) => {
 
 export const getAllContests = async (req, res) => {
     try {
-        const cachedContests = contestCache.get(namespace);
-        if (cachedContests) {
-            console.log("Contest Cache Hit");
-            return res.status(200).json(cachedContests);
-        }
         const {
             status,
             sortBy = 'startTime',
@@ -52,8 +49,14 @@ export const getAllContests = async (req, res) => {
             limit = 10
         } = req.query;
 
-        const filter = status ? { status } : {};
+        
+        const cachedContests = contestCache.get(cacheKey);
+        if (cachedContests) {
+            console.log("Serving contests from cache");
+            return res.status(200).json(cachedContests);
+        }
 
+        const filter = status ? { status } : {};
         const sortOptions = {
             [sortBy]: orderBy === 'desc' ? -1 : 1
         };
@@ -78,7 +81,7 @@ export const getAllContests = async (req, res) => {
             }
         };
 
-        contestCache.set(namespace, response);
+        contestCache.set(cacheKey, response);
         res.status(200).json(response);
     } catch (error) {
         res.status(500).json({
@@ -88,22 +91,20 @@ export const getAllContests = async (req, res) => {
     }
 };
 
-
-
 export const getContestById = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const cachedContest = contestCache.get(id);
-        if (cachedContest) {
-            console.log("get Contest by id Cache Hit");
-            return res.status(200).json(cachedContest);
-        }
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 message: 'Invalid Contest ID'
             });
+        }
+
+        const cachedContest = contestCache.get(id);
+        if (cachedContest) {
+            console.log("Serving contest from cache");
+            return res.status(200).json({ contest: cachedContest });
         }
 
         const contest = await Contest.findById(id);
@@ -112,6 +113,7 @@ export const getContestById = async (req, res) => {
                 message: 'Contest not found'
             });
         }
+
         contestCache.set(id, contest);
         res.status(200).json({ contest });
     } catch (error) {
@@ -152,8 +154,8 @@ export const updateContest = async (req, res) => {
             });
         }
 
-        contestCache.invalidate(namespace);
         contestCache.set(id, updatedContest);
+        contestCache.invalidate(cacheKey);
 
         res.status(200).json({
             message: 'Contest updated successfully',
@@ -165,7 +167,7 @@ export const updateContest = async (req, res) => {
             error: error.message
         });
     }
-}
+};
 
 export const deleteContest = async (req, res) => {
     try {
@@ -185,8 +187,8 @@ export const deleteContest = async (req, res) => {
             });
         }
 
-        contestCache.invalidate(namespace);
         contestCache.invalidate(id);
+        contestCache.invalidate(cacheKey);
 
         res.status(200).json({
             message: 'Contest deleted successfully',
