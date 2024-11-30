@@ -23,7 +23,7 @@ export const createContest = async (req, res) => {
         const { contest, standings } = await handleContestData(contestId);
 
         contestCache.invalidate(cacheKey);
-        
+
         contestCache.set(contest._id.toString(), contest);
 
         res.status(201).json({
@@ -49,7 +49,7 @@ export const getAllContests = async (req, res) => {
             limit = 10
         } = req.query;
 
-        
+
         const cachedContests = contestCache.get(cacheKey);
         if (cachedContests) {
             console.log("Serving contests from cache");
@@ -180,6 +180,7 @@ export const deleteContest = async (req, res) => {
         }
 
         const deletedContest = await Contest.findByIdAndDelete(id);
+        await Standings.findOneAndDelete({ contest: id });
 
         if (!deletedContest) {
             return res.status(404).json({
