@@ -79,30 +79,43 @@ export const updateStandings = async (contestId) => {
                 }
             }
         }
-
-        const standings = Object.entries(unifiedData).map(([participantId, data]) => {
+        
+        const standings = [];
+        for (const [participantId, data] of Object.entries(unifiedData)) {
             const solvedProblems = new Set();
+            const wrongSubmissions = {};
             let totalTimePenalty = 0;
+            const penaltyPerWrongSubmission = 20 * 60;
 
             for (const [problemIndex, solveTime] of data.solved_times) {
                 solvedProblems.add(problemIndex);
                 totalTimePenalty += solveTime;
+
+                wrongSubmissions[problemIndex] = data.submissions
+                    .filter(submission =>
+                        submission.problem_index === problemIndex &&
+                        submission.status === 0 &&
+                        submission.time < solveTime
+                    )
+                    .map(submission => submission.time);
             }
 
-            data.attempted_problems = data.attempted_problems.filter(
-                problem => !solvedProblems.has(problem)
-            );
+            for (const [problemIndex, wrongTimes] of Object.entries(wrongSubmissions)) {
+                totalTimePenalty += wrongTimes.length * penaltyPerWrongSubmission;
+            }
 
-            return {
+            standings.push({
                 handle: data.handle,
                 display_name: data.display_name,
                 total_solved: solvedProblems.size,
                 total_time: totalTimePenalty,
                 solved_problems: Array.from(solvedProblems),
                 first_solves: data.first_solves,
-                attempted_problems: data.attempted_problems,
-            };
-        });
+                attempted_problems: data.attempted_problems.filter(
+                    problem => !solvedProblems.has(problem)
+                ),
+            });
+        }
 
         standings.sort((a, b) => {
             if (a.total_solved !== b.total_solved) return b.total_solved - a.total_solved;
