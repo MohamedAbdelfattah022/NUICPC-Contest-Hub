@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Eye, EyeOff, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 import { login } from "../../services/authService";
 
 const LoginPage = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
@@ -58,6 +59,12 @@ const LoginPage = () => {
 				<h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
 					Admin Login
 				</h2>
+				{location.state?.passwordReset && (
+					<div className="mt-2 text-center text-sm text-green-600">
+						Password has been reset successfully. Please login with your new
+						password.
+					</div>
+				)}
 			</div>
 
 			<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -124,17 +131,19 @@ const LoginPage = () => {
 										errors.password ? "border-red-300" : "border-gray-300"
 									} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
 								/>
-								<button
-									type="button"
-									className="absolute inset-y-0 right-0 pr-3 flex items-center"
-									onClick={() => setShowPassword(!showPassword)}
-								>
-									{showPassword ? (
-										<EyeOff className="h-5 w-5 text-gray-400" />
-									) : (
-										<Eye className="h-5 w-5 text-gray-400" />
-									)}
-								</button>
+								{formData.password && (
+									<button
+										type="button"
+										className="absolute inset-y-0 right-0 pr-3 flex items-center"
+										onClick={() => setShowPassword(!showPassword)}
+									>
+										{showPassword ? (
+											<EyeOff className="h-5 w-5 text-gray-400" />
+										) : (
+											<Eye className="h-5 w-5 text-gray-400" />
+										)}
+									</button>
+								)}
 							</div>
 							{errors.password && (
 								<p className="mt-2 text-sm text-red-600">{errors.password}</p>
@@ -143,12 +152,12 @@ const LoginPage = () => {
 
 						<div className="flex items-center justify-between">
 							<div className="text-sm">
-								<a
-									href="#"
+								<Link
+									to="/forgot-password"
 									className="font-medium text-blue-600 hover:text-blue-500"
 								>
 									Forgot your password?
-								</a>
+								</Link>
 							</div>
 						</div>
 
