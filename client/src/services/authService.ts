@@ -3,13 +3,13 @@ import axios from "axios";
 const API_URL = "http://localhost:5000/api";
 
 export const register = async (
-	email: string,
+	token: string,
 	password: string,
 	fullName: string
 ) => {
 	try {
 		const response = await axios.post(`${API_URL}/admin/register`, {
-			email,
+			token,
 			password,
 			fullName,
 		});
@@ -48,41 +48,55 @@ export const logout = async () => {
 			}
 		);
 		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
 	} catch (error) {
 		console.error("Logout failed:", error);
 	}
 };
 
-// export const refreshAccessToken = async () => {
-// 	try {
-// 		const refreshToken = localStorage.getItem("refreshToken");
-// 		if (!refreshToken) throw new Error("No refresh token");
+export const inviteAdmin = async (email: string) => {
+	try {
+		const token = localStorage.getItem("accessToken");
+		const response = await axios.post(
+			`${API_URL}/admin/invite`,
+			{ email },
+			{
+				headers: { Authorization: `Bearer ${token}` },
+			}
+		);
+		return response.data;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw new Error(error.response?.data?.message || "Invitation failed");
+		}
+		throw error;
+	}
+};
 
-// 		const response = await axios.post(`${API_URL}/admin/refresh-token`, {
-// 			refreshToken,
-// 		});
+export const forgotPassword = async (email: string) => {
+	try {
+		const response = await axios.post(`${API_URL}/admin/forgot`, { email });
+		return response.data;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw new Error(
+				error.response?.data?.message || "Password reset request failed"
+			);
+		}
+		throw error;
+	}
+};
 
-// 		const { accessToken, refreshToken: newRefreshToken } = response.data;
-// 		localStorage.setItem("accessToken", accessToken);
-// 		localStorage.setItem("refreshToken", newRefreshToken);
-
-// 		return accessToken;
-// 	} catch (error) {
-// 		localStorage.removeItem("accessToken");
-// 		localStorage.removeItem("refreshToken");
-// 		throw error;
-// 	}
-// };
-
-// export const verifySession = async () => {
-// 	try {
-// 		const token = localStorage.getItem("accessToken");
-// 		const response = await axios.get(`${API_URL}/admin/verify-session`, {
-// 			headers: { Authorization: `Bearer ${token}` },
-// 		});
-// 		return response.data.valid;
-// 	} catch (error) {
-// 		return false;
-// 	}
-// };
+export const resetPassword = async (token: string, password: string) => {
+	try {
+		const response = await axios.put(`${API_URL}/admin/reset-pass`, {
+			token,
+			password,
+		});
+		return response.data;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw new Error(error.response?.data?.message || "Password reset failed");
+		}
+		throw error;
+	}
+};

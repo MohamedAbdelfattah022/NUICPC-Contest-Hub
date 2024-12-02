@@ -1,21 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-	Eye,
-	EyeOff,
-	Lock,
-	User,
-	Mail,
-	AlertCircle,
-	Loader2,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 import { register } from "../../services/authService";
 
 const RegisterPage = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
+	const [token, setToken] = useState("");
 	const [formData, setFormData] = useState({
 		fullName: "",
-		email: "",
 		password: "",
 		confirmPassword: "",
 	});
@@ -25,17 +18,21 @@ const RegisterPage = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [registerError, setRegisterError] = useState("");
 
+	useEffect(() => {
+		const params = new URLSearchParams(location.search);
+		const inviteToken = params.get("token");
+		if (!inviteToken) {
+			navigate("/login");
+		} else {
+			setToken(inviteToken);
+		}
+	}, [location, navigate]);
+
 	const validateForm = () => {
 		const newErrors: { [key: string]: string } = {};
 
 		if (!formData.fullName.trim()) {
 			newErrors.fullName = "Full name is required";
-		}
-
-		if (!formData.email.trim()) {
-			newErrors.email = "Email is required";
-		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-			newErrors.email = "Invalid email format";
 		}
 
 		if (!formData.password) {
@@ -63,7 +60,7 @@ const RegisterPage = () => {
 
 		setIsLoading(true);
 		try {
-			await register(formData.email, formData.password, formData.fullName);
+			await register(token, formData.password, formData.fullName);
 			navigate("/login", { state: { registered: true } });
 		} catch (error) {
 			setRegisterError(
@@ -81,7 +78,7 @@ const RegisterPage = () => {
 					<Lock className="w-12 h-12 text-blue-600" />
 				</div>
 				<h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-					Register as Admin
+					Complete Registration
 				</h2>
 			</div>
 
@@ -121,36 +118,6 @@ const RegisterPage = () => {
 							</div>
 							{errors.fullName && (
 								<p className="mt-2 text-sm text-red-600">{errors.fullName}</p>
-							)}
-						</div>
-
-						<div>
-							<label
-								htmlFor="email"
-								className="block text-sm font-medium text-gray-700"
-							>
-								Email
-							</label>
-							<div className="mt-1 relative">
-								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-									<Mail className="h-5 w-5 text-gray-400" />
-								</div>
-								<input
-									id="email"
-									name="email"
-									type="email"
-									autoComplete="email"
-									value={formData.email}
-									onChange={(e) =>
-										setFormData({ ...formData, email: e.target.value })
-									}
-									className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
-										errors.email ? "border-red-300" : "border-gray-300"
-									} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-								/>
-							</div>
-							{errors.email && (
-								<p className="mt-2 text-sm text-red-600">{errors.email}</p>
 							)}
 						</div>
 
@@ -253,7 +220,7 @@ const RegisterPage = () => {
 										Registering...
 									</>
 								) : (
-									"Register"
+									"Complete Registration"
 								)}
 							</button>
 						</div>

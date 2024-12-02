@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trophy, Users, Menu } from "lucide-react";
+import { Trophy, Users, Menu, UserPlus } from "lucide-react";
 
 interface SidebarProps {
 	activeTab: string;
@@ -12,6 +12,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
 	const tabs = [
 		{ id: "contests", icon: Trophy, label: "Contests" },
 		{ id: "users", icon: Users, label: "Users" },
+		{ id: "invite", icon: UserPlus, label: "Invite Admin" },
 	];
 
 	return (
