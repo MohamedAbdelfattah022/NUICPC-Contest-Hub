@@ -1,7 +1,9 @@
 import axios from "axios";
-import { Contest, Contestant, User, ApiError } from "../types";
+import { Contest, Contestant, User } from "../types";
+import { jwtDecode } from "jwt-decode";
+import { sessionService } from "./sessionService";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
 	baseURL: API_BASE_URL,
@@ -14,7 +16,22 @@ api.interceptors.request.use(
 	(config) => {
 		const token = localStorage.getItem("accessToken");
 		if (token) {
-			config.headers.Authorization = `Bearer ${token}`;
+			try {
+				const decodedToken = jwtDecode<{ exp: number }>(token);
+				const currentTime = Date.now() / 1000;
+
+				if (decodedToken.exp < currentTime) {
+					localStorage.clear();
+					window.location.href = "/login";
+					return Promise.reject("Token expired");
+				}
+
+				config.headers.Authorization = `Bearer ${token}`;
+			} catch (error) {
+				localStorage.clear();
+				window.location.href = "/login";
+				return Promise.reject("Invalid token");
+			}
 		}
 		return config;
 	},
@@ -25,10 +42,9 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
 	(response) => response,
-	(error) => {
+	async (error) => {
 		if (error.response?.status === 401) {
-			localStorage.clear();
-			window.location.href = "/login";
+			await sessionService.checkSession();
 		}
 		return Promise.reject(error);
 	}

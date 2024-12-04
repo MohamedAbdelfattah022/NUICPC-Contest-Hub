@@ -13,13 +13,17 @@ const sessionSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now,
-        expires: 900,
     },
     isValid: {
         type: Boolean,
         default: true,
     },
+    duration: {
+        type: Number,
+        default: 120,
+    }
 });
 
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 120 });
 const Session = mongoose.model('Session', sessionSchema);
 export default Session;

@@ -1,11 +1,12 @@
 import express from 'express';
 import { login, logout, register, inviteAdmin, forgotPass, resetPass, loginLimiter, registerLimiter } from '../controllers/admin_controller.js';
 import { verifyToken } from '../middleware/auth_middleware.js';
+import { validateSession } from '../middleware/session_middleware.js';
 
 const router = express.Router();
 
 // router.post('/register', register);
-router.post('/login', login);
+router.post('/login', validateSession, login);
 // router.post('/login', loginLimiter, login);
 // router.post('/reset-password', resetPassword);
 

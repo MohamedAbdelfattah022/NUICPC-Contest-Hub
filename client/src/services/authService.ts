@@ -1,6 +1,7 @@
 import axios from "axios";
+import { sessionService } from "./sessionService";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const register = async (
 	token: string,
@@ -40,13 +41,20 @@ export const login = async (email: string, password: string) => {
 export const logout = async () => {
 	try {
 		const token = localStorage.getItem("accessToken");
-		await axios.post(
-			`${API_URL}/admin/logout`,
-			{},
-			{
-				headers: { Authorization: `Bearer ${token}` },
+		if (token) {
+			try {
+				await axios.post(
+					`${API_URL}/admin/logout`,
+					{},
+					{
+						headers: { Authorization: `Bearer ${token}` },
+					}
+				);
+			} catch (error) {
+				console.log(error);
 			}
-		);
+		}
+		sessionService.stopSessionMonitoring();
 		localStorage.removeItem("accessToken");
 	} catch (error) {
 		console.error("Logout failed:", error);

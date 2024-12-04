@@ -13,7 +13,7 @@ const generateTokens = (adminId) => {
             uuid: uuidv4(),
         },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: '2m' }
     );
 
     return accessToken;
