@@ -52,7 +52,6 @@ export const getAllContests = async (req, res) => {
 
         const cachedContests = contestCache.get(cacheKey);
         if (cachedContests) {
-            console.log("Serving contests from cache");
             return res.status(200).json(cachedContests);
         }
 
@@ -103,7 +102,6 @@ export const getContestById = async (req, res) => {
 
         const cachedContest = contestCache.get(id);
         if (cachedContest) {
-            console.log("Serving contest from cache");
             return res.status(200).json({ contest: cachedContest });
         }
 

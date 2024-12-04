@@ -48,8 +48,6 @@ export const loginAdmin = async (email, password) => {
 }
 
 export const logoutAdmin = async (sessionId) => {
-    console.log(sessionId);
-
     await Session.findByIdAndDelete(sessionId, { isValid: false });
 };
 

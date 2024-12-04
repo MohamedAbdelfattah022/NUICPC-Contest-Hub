@@ -14,7 +14,6 @@ export const getUsers = async (req, res) => {
     try {
         const cachedUsers = userCache.get("users");
         if (cachedUsers) {
-            console.log("User Cache Hit");
             return res.status(200).json(cachedUsers);
         }
 
@@ -31,7 +30,6 @@ export const getUser = async (req, res) => {
         const id = req.params.id;
         const cachedUser = userCache.get(id);
         if (cachedUser) {
-            console.log("get User by id Cache Hit");
             return res.status(200).json(cachedUser);
         }
         const user = await User.findById(id).select('-__v');

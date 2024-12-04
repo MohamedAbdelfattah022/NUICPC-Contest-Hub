@@ -19,7 +19,6 @@ export const getStandings = async (req, res) => {
 
         const cachedData = standingsCache.get(id);
         if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-            console.log('Serving from cache');
             return res.status(200).json(cachedData.standings);
         }
 
@@ -31,8 +30,6 @@ export const getStandings = async (req, res) => {
         }
 
         try {
-            console.log("Fetching standings from external API...");
-            
             const standings = await updateStandings(contest.contestId);
             standingsCache.set(id, {
                 standings,
