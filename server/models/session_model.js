@@ -20,10 +20,10 @@ const sessionSchema = new mongoose.Schema({
     },
     duration: {
         type: Number,
-        default: 120,
+        default: 900,
     }
 });
 
-sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 120 });
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 900 });
 const Session = mongoose.model('Session', sessionSchema);
 export default Session;
