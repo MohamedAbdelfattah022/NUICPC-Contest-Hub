@@ -22,7 +22,7 @@ app.use('/api/admin', adminRoutes);
 
 const connectWithRetry = async () => {
     const MAX_RETRIES = 5;
-    const RETRY_DELAY = 5000; // 5 seconds
+    const RETRY_DELAY = 5000;  
     let retries = 0;
 
     while (retries < MAX_RETRIES) {
