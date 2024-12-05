@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run generate-html && vite build",
-    "generate-html": "mkdir -p dist && cp index.html dist/",
+    "generate-html": "cp index.html dist/",
     "lint": "eslint .",
     "preview": "vite preview"
   },
